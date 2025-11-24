@@ -1,6 +1,7 @@
 #ifndef SP_SAMPLER_H
 #define SP_SAMPLER_H
 
+#include <cstdint>
 #include <vector>
 #include <map>
 #include <ctype.h>

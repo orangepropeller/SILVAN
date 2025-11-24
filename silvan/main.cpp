@@ -4,6 +4,7 @@
 #include <math.h>
 #include <ctime>
 #include <cstddef>
+#include <getopt.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <fstream>
@@ -12,6 +13,7 @@
 #include "Graph.h"
 #include "utilities.h"
 #include "Probabilistic.h"
+#include <omp.h>
 
 extern char *optarg;
 static const std::string ERROR_HEADER = "ERROR: ";
@@ -140,6 +142,7 @@ int parse_command_line(int& argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]){
+    omp_set_num_threads(1);
     int correct_parse = parse_command_line(argc, argv);
 
     if (correct_parse != 0) {

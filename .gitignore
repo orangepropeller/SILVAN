@@ -1,0 +1,58 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# CMake
+build/
+cmake-build-debug/
+cmake-build-release/
+.cmake/
+
+# VS Code
+.vscode/
+.history/
+*.code-workspace
+
+# Clang/LLVM
+compile_commands.json
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Project specific
+datasets/
+scripts/output*.txt
+scripts/results*.csv
+scripts/*.csv
+

@@ -1,5 +1,6 @@
 #ifndef GRAPH_H
 #define GRAPH_H
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <set>

@@ -1,6 +1,7 @@
 #ifndef PROBABILISTIC_H
 #define PROBABILISTIC_H
 
+#include <cstdint>
 #include <Graph.h>
 #include <string>
 #include <utility>

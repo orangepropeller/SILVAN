@@ -15,7 +15,15 @@ args = parser.parse_args()
 
 delta = args.delta
 file_output_path = "output.txt"
-path_executable = "../silvan/silvan"
+import sys
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if sys.platform == "win32":
+    path_executable = os.path.join(script_dir, "..", "build", "silvan.exe")
+    path_executable = os.path.normpath(path_executable)
+else:
+    path_executable = os.path.join(script_dir, "..", "build", "silvan")
+    path_executable = os.path.normpath(path_executable)
 output_path = args.o
 directed_flag = ""
 if args.type == 1:
