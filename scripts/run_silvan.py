@@ -15,8 +15,10 @@ args = parser.parse_args()
 
 delta = args.delta
 file_output_path = "output.txt"
+bc_scores_file = "bc_scores.txt"
 import sys
-import os
+import numpy as np
+from scipy.io import savemat
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if sys.platform == "win32":
     path_executable = os.path.join(script_dir, "..", "build", "silvan.exe")
@@ -37,6 +39,7 @@ if args.k > 0:
     topk_flag = "-k "+str(args.k)+" "
     output_path = "results_silvan_topk.csv"
     file_output_path = "output_topk.txt"
+    bc_scores_file = "bc_scores_topk.txt"
     algname = "SILVAN-TOPK"
 optional_parameters = ""
 if args.alpha != 2.3:
@@ -55,7 +58,7 @@ if args.mh == 0:
     optional_parameters = optional_parameters+"-m "
 
 print("Running",algname,"with eps =",args.epsilon)
-cmd = path_executable+" "+directed_flag+topk_flag+optional_parameters+str(args.epsilon)+" "+str(delta)+" "+str(args.db)+" > "+file_output_path
+cmd = path_executable+" "+directed_flag+topk_flag+optional_parameters+"-o "+bc_scores_file+" "+str(args.epsilon)+" "+str(delta)+" "+str(args.db)+" > "+file_output_path
 print(cmd)
 retval = os.system(cmd)
 if retval > 0:
@@ -105,3 +108,30 @@ for idx, result_string in enumerate(results_strings):
 line_out = line_out+"\n"
 print(line_out)
 out_file.write(line_out)
+out_file.close()
+
+if os.path.isfile(bc_scores_file):
+    bc_scores = []
+    with open(bc_scores_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                parts = line.split(',')
+                if len(parts) >= 2:
+                    try:
+                        node_id = int(parts[0])
+                        bc_value = float(parts[1])
+                        bc_scores.append([node_id, bc_value])
+                    except ValueError:
+                        pass
+    
+    if bc_scores:
+        bc_scores = np.array(bc_scores)
+        mat_output_path = args.db.replace('.txt', '_bc_scores.mat')
+        mat_output_path = os.path.basename(mat_output_path)
+        savemat(mat_output_path, {'bc_scores': bc_scores})
+        print(f"BC scores saved to {mat_output_path}")
+    else:
+        print("Warning: No BC scores found in output file")
+else:
+    print(f"Warning: BC scores file {bc_scores_file} not found")

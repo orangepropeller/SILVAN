@@ -1,4 +1,10 @@
 import os
+import shutil
+import urllib.request
+import gzip
+import tarfile
+import zipfile
+import pandas as pd
 
 directed_graphs_links = [
 "http://snap.stanford.edu/data/p2p-Gnutella31.txt.gz",
@@ -24,54 +30,114 @@ undirected_graphs_links = [
 "http://snap.stanford.edu/data/ca-AstroPh.txt.gz" # http://snap.stanford.edu/data/ca-AstroPh.html
 ]
 
-all_links = directed_graphs_links+undirected_graphs_links
+all_links = directed_graphs_links + undirected_graphs_links
+
+# Determine paths relative to the script location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# Assuming script is in scripts/, put datasets in the parent directory
+project_root = os.path.dirname(script_dir)
+datasets_dir = os.path.join(project_root, "datasets")
+graph_experiments_paths = os.path.join(script_dir, "graphs_experiments.csv")
+
+if not os.path.exists(datasets_dir):
+    os.makedirs(datasets_dir)
 
 filepaths = []
-graph_experiments_paths = "graphs_experiments.csv"
-graphs_list_file = open(graph_experiments_paths,"w")
-graphs_list_file.write("graph_name;directed\n")
+
+with open(graph_experiments_paths, "w") as graphs_list_file:
+    graphs_list_file.write("graph_name;directed\n")
+    for link in all_links:
+        filepath = link.rfind("/")
+        filepath = link[filepath+1:]
+        print(filepath)
+        filepaths.append(filepath)
+        
+        name = filepath
+        name = name.replace(".gz","")
+        name = name.replace(".zip","")
+        name = name.replace(".tar","")
+        name = name.replace(".bz2","")
+        name = name.replace("download.tsv.","")
+        
+        if ".txt" not in name:
+            name = name + ".txt"
+            
+        if link in undirected_graphs_links:
+            graphs_list_file.write(name+";U\n")
+        else:
+            graphs_list_file.write(name+";D\n")
+
+print(f"\nDownloading datasets to {datasets_dir}...")
+
+# Create a custom opener to avoid 403 Forbidden errors on some sites
+opener = urllib.request.build_opener()
+opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+urllib.request.install_opener(opener)
+
 for link in all_links:
-    filepath = link.rfind("/")
-    filepath = link[filepath+1:]
-    print(filepath)
-    filepaths.append(filepath)
-    filepath = filepath.replace(".gz","")
-    filepath = filepath.replace(".zip","")
-    filepath = filepath.replace(".tar","")
-    filepath = filepath.replace(".bz2","")
-    filepath = filepath.replace("download.tsv.","")
-    if ".txt" not in filepath:
-        filepath = filepath+".txt"
-    if link in undirected_graphs_links:
-        graphs_list_file.write(filepath+";U\n")
+    filename = link.split("/")[-1]
+    dest_path = os.path.join(datasets_dir, filename)
+    
+    if not os.path.exists(dest_path):
+        print(f"Downloading {filename}...")
+        try:
+            urllib.request.urlretrieve(link, dest_path)
+        except Exception as e:
+            print(f"Failed to download {link}: {e}")
     else:
-        graphs_list_file.write(filepath+";D\n")
-graphs_list_file.close()
+        print(f"{filename} already exists. Skipping.")
 
-os.system("cd .. && mkdir datasets")
-
-for link in all_links:
-    os.system("cd ../datasets && wget -N "+link)
-
+print("\nExtracting datasets...")
 for filepath in filepaths:
-    if "zip" in filepath:
-        os.system("cd ../datasets && unzip -o "+filepath)
-    if ".gz" in filepath:
-        os.system("cd ../datasets && gunzip -kf "+filepath)
+    full_path = os.path.join(datasets_dir, filepath)
+    
+    if not os.path.exists(full_path):
+        continue
+
+    if ".zip" in filepath:
+        print(f"Unzipping {filepath}...")
+        try:
+            with zipfile.ZipFile(full_path, 'r') as zip_ref:
+                zip_ref.extractall(datasets_dir)
+        except Exception as e:
+            print(f"Error unzipping {filepath}: {e}")
+
+    if ".gz" in filepath and ".tar" not in filepath:
+        print(f"Decompressing {filepath}...")
+        out_path = os.path.join(datasets_dir, filepath.replace(".gz", ""))
+        try:
+            with gzip.open(full_path, 'rb') as f_in:
+                with open(out_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+        except Exception as e:
+            print(f"Error decompressing {filepath}: {e}")
+
     if ".tar.bz2" in filepath:
-        os.system("cd ../datasets && tar xjf "+filepath)
+        print(f"Extracting {filepath}...")
+        try:
+            with tarfile.open(full_path, "r:bz2") as tar:
+                tar.extractall(datasets_dir)
+        except Exception as e:
+             print(f"Error extracting {filepath}: {e}")
+
     if "download.tsv." in filepath:
         filepath_ = filepath.replace("download.tsv.","")
         filepath_ = filepath_.replace(".tar.bz2","")
-        file_to_copy_path = "../datasets/"+filepath_+"/out."+filepath_
-        file_final_path = "../datasets/"+filepath_+".txt"
-        os.system("cp "+file_to_copy_path+" "+file_final_path)
-
-import pandas as pd
-
-graph_experiments_paths = "graphs_experiments.csv"
-graphs = pd.read_csv(graph_experiments_paths,sep=";")
-graphs = graphs["graph_name"].values
-for graph_filename in graphs:
-    if os.path.isfile("../datasets/"+graph_filename) == False:
-        print("Graph file for ",graph_filename," not found!")
+        
+        src_file = os.path.join(datasets_dir, filepath_, "out." + filepath_)
+        dest_file = os.path.join(datasets_dir, filepath_ + ".txt")
+        
+        if os.path.exists(src_file):
+            print(f"Copying {src_file} to {dest_file}")
+            shutil.copy(src_file, dest_file)
+        
+print("\nVerifying graph files...")
+try:
+    graphs = pd.read_csv(graph_experiments_paths, sep=";")
+    graphs_list = graphs["graph_name"].values
+    for graph_filename in graphs_list:
+        if not os.path.isfile(os.path.join(datasets_dir, graph_filename)):
+            print("Graph file for ", graph_filename, " not found!")
+    print("Verification complete.")
+except Exception as e:
+    print(f"Error verifying graphs: {e}")
